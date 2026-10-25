@@ -52,10 +52,10 @@ flowchart TD
 ```
 
 ### Component Breakdown
-1. **Frontend (`frontend/`):** React 18, TypeScript, TailwindCSS, and Recharts. Engineered with a dark-slate institutional aesthetic matching professional trading desks (Bloomberg/Trayport/EnAppSys style).
+1. **Frontend (`frontend/`):** React 18, TypeScript, TailwindCSS, and Recharts. Engineered with a crisp, institutional light trading desk theme.
 2. **Backend Engine (`backend/`):** FastAPI application with vectorized pandas / numpy numerical processing, Pydantic v2 data validation, and async HTTP streaming (`httpx`).
-3. **Data Cache (`data/cache_jan2026.json`):** Pre-warmed serialized JSON store containing all 1,490 half-hourly wind actuals and 20,440 wind forecasts for January 2026 (including late December 2025 runs). Boots the service in **<35 milliseconds** with zero rate-limit exposure.
-4. **Serverless Adapter (`api/index.py` & `vercel.json`):** ASGI bridge for single-click deployment to Vercel Serverless Functions.
+3. **Data Cache (`backend/data/cache_jan2026.json`):** Pre-warmed serialized JSON store containing all 1,490 half-hourly wind actuals and 20,440 wind forecasts for January 2026 (including late December 2025 runs). Boots the service in **<35 milliseconds** with zero rate-limit exposure.
+4. **Vercel Services Architecture (`vercel.json`):** Multi-service configuration routing `/api/*` to the FastAPI backend service and `/*` to the Vite React frontend.
 
 ---
 
@@ -164,26 +164,22 @@ docker compose up --build
 
 ## 7. Deployment to Vercel
 
-AEOLUS is pre-configured to deploy directly to Vercel with zero modifications using `@vercel/python` for the backend and `@vercel/static-build` for the frontend.
+AEOLUS is configured for **Vercel Services** (multi-service monorepos), allowing the Vite React frontend and the Python FastAPI backend to deploy together within a single Vercel project under the same domain.
 
 ### Vercel Deployment Steps:
-1. **Install Vercel CLI (or push to GitHub):**
-   ```bash
-   npm install -g vercel
-   ```
-2. **Deploy:**
-   ```bash
-   vercel
-   ```
-3. **Production Release:**
-   ```bash
-   vercel --prod
-   ```
+1. **Push to GitHub:**
+   Connect the repository to Vercel via the Vercel Dashboard (`vercel.com/new`).
+2. **Automatic Detection:**
+   Vercel automatically detects the multi-service layout from `vercel.json`:
+   * **`frontend` service:** Framework `vite`, root `frontend/`.
+   * **`backend` service:** Framework `fastapi`, root `backend/`.
+3. **Deploy:**
+   Click **Deploy**. Vercel builds both services concurrently.
 
 ### How Vercel Routing Works (`vercel.json`):
-* `/api/(.*)` requests are routed to the serverless Python ASGI function in `api/index.py`.
-* All other routes serve the static React single-page app built from `frontend/`.
-* The included `data/cache_jan2026.json` file ensures that Vercel serverless cold starts never timeout or get throttled by the external Elexon BMRS API.
+* `/api/(.*)` requests are transparently routed to the `backend` FastAPI service.
+* All other requests (`/(.*)`) route to the `frontend` Vite single-page app.
+* The pre-cached data file (`backend/data/cache_jan2026.json`) is included directly inside the backend service bundle, ensuring instant sub-50ms cold starts without external API latency.
 
 ---
 
