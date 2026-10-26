@@ -114,7 +114,7 @@ flowchart TD
 ### Fast Start (Local Unified Dev)
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/example/aeolus.git
+   git clone https://github.com/npcenergydev/AEOLUS.git
    cd AEOLUS
    ```
 
