@@ -1,4 +1,5 @@
 import sys
+import os
 import types
 from pathlib import Path
 
@@ -10,17 +11,20 @@ for p in [str(backend_dir), str(repo_root)]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
-# Alias 'backend' to backend_dir if not present so 'from backend.app...' imports always resolve
+# Alias 'backend' if not already present
 if "backend" not in sys.modules:
     backend_pkg = types.ModuleType("backend")
     backend_pkg.__path__ = [str(backend_dir)]
     sys.modules["backend"] = backend_pkg
 
-# Import FastAPI app instance
+# Import FastAPI instance as app
 try:
-    from app.main import app
+    from app.main import app as fastapi_app
 except ImportError:
-    from backend.app.main import app
+    from backend.app.main import app as fastapi_app
+
+# Expose app for ASGI runners (uvicorn, Vercel, Mangum, etc.)
+app = fastapi_app
 
 if __name__ == "__main__":
     import uvicorn

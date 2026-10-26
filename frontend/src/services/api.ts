@@ -8,16 +8,34 @@ import {
 
 const BASE_URL = '/api';
 
+async function handleResponse<T>(res: Response, fallbackMsg: string): Promise<T> {
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const text = await res.text();
+      try {
+        const errJson = JSON.parse(text);
+        detail = errJson.detail || errJson.message || text;
+      } catch {
+        detail = text;
+      }
+    } catch {
+      // ignore
+    }
+    const suffix = detail ? ` - ${detail}` : ` (${res.status} ${res.statusText})`;
+    throw new Error(`${fallbackMsg}${suffix}`);
+  }
+  return res.json();
+}
+
 export async function fetchHealth(): Promise<HealthResponse> {
   const res = await fetch(`${BASE_URL}/health`);
-  if (!res.ok) throw new Error(`Health check failed: ${res.statusText}`);
-  return res.json();
+  return handleResponse<HealthResponse>(res, 'Health check failed');
 }
 
 export async function fetchDates(): Promise<DateRangeInfo> {
   const res = await fetch(`${BASE_URL}/dates`);
-  if (!res.ok) throw new Error(`Failed to fetch dates: ${res.statusText}`);
-  return res.json();
+  return handleResponse<DateRangeInfo>(res, 'Failed to fetch dates');
 }
 
 export async function fetchForecast(
@@ -33,8 +51,7 @@ export async function fetchForecast(
     resolution,
   });
   const res = await fetch(`${BASE_URL}/forecast?${params.toString()}`);
-  if (!res.ok) throw new Error(`Failed to fetch forecast: ${res.statusText}`);
-  return res.json();
+  return handleResponse<ForecastViewResponse>(res, 'Failed to fetch forecast');
 }
 
 export async function fetchMetrics(
@@ -50,8 +67,7 @@ export async function fetchMetrics(
     resolution,
   });
   const res = await fetch(`${BASE_URL}/metrics?${params.toString()}`);
-  if (!res.ok) throw new Error(`Failed to fetch metrics: ${res.statusText}`);
-  return res.json();
+  return handleResponse<MetricsSummaryResponse>(res, 'Failed to fetch metrics');
 }
 
 export async function fetchHorizons(
@@ -63,12 +79,10 @@ export async function fetchHorizons(
     params.append('target_hour', targetHour.toString());
   }
   const res = await fetch(`${BASE_URL}/horizons?${params.toString()}`);
-  if (!res.ok) throw new Error(`Failed to fetch horizons: ${res.statusText}`);
-  return res.json();
+  return handleResponse<HorizonPoint[]>(res, 'Failed to fetch horizons');
 }
 
 export async function triggerRefresh(): Promise<{ status: string; message: string }> {
   const res = await fetch(`${BASE_URL}/refresh`, { method: 'POST' });
-  if (!res.ok) throw new Error(`Refresh failed: ${res.statusText}`);
-  return res.json();
+  return handleResponse<{ status: string; message: string }>(res, 'Refresh failed');
 }

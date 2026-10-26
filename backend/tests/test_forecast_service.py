@@ -1,7 +1,18 @@
+import sys
+from pathlib import Path
+
+backend_dir = Path(__file__).resolve().parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
 import pytest
 from datetime import datetime, time
 import pandas as pd
-from backend.app.services.forecast_service import ForecastService
+
+try:
+    from app.services.forecast_service import ForecastService
+except ImportError:
+    from backend.app.services.forecast_service import ForecastService
 
 def test_parse_cutoff_time():
     assert ForecastService.parse_cutoff_time("12:00") == time(12, 0)

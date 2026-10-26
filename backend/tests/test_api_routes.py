@@ -1,6 +1,18 @@
+import sys
+from pathlib import Path
+
+# Add backend dir to sys.path so tests can run from anywhere
+backend_dir = Path(__file__).resolve().parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
 import pytest
 from fastapi.testclient import TestClient
-from backend.app.main import app
+
+try:
+    from app.main import app
+except ImportError:
+    from backend.app.main import app
 
 client = TestClient(app)
 

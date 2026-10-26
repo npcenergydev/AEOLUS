@@ -17,24 +17,36 @@ class Settings:
     DEFAULT_START_DATE: str = "2026-01-01"
     DEFAULT_END_DATE: str = "2026-01-07"
     
-    # Cache File Path
-    BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent.parent
+    # Base directory paths
+    BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
     DATA_DIR: Path = BASE_DIR / "data"
     
     @property
     def CACHE_FILE(self) -> Path:
-        # Check standard root/data path first
-        candidate1 = self.DATA_DIR / "cache_jan2026.json"
-        if candidate1.exists():
-            return candidate1
-        # Check relative to cwd
-        candidate2 = Path("data/cache_jan2026.json").resolve()
-        if candidate2.exists():
-            return candidate2
-        # Check relative to api directory (Vercel)
-        candidate3 = Path(__file__).resolve().parents[2] / "data" / "cache_jan2026.json"
-        if candidate3.exists():
-            return candidate3
-        return candidate1
+        """Resolve the pre-fetched cache file across local, container, and Vercel environments."""
+        this_file = Path(__file__).resolve()
+        candidates = [
+            # backend/app/data/cache_jan2026.json
+            this_file.parent.parent / "data" / "cache_jan2026.json",
+            # backend/data/cache_jan2026.json
+            this_file.parent.parent.parent / "data" / "cache_jan2026.json",
+            # repo_root/data/cache_jan2026.json
+            this_file.parent.parent.parent.parent / "data" / "cache_jan2026.json",
+            # CWD relative paths
+            Path.cwd() / "data" / "cache_jan2026.json",
+            Path.cwd() / "backend" / "data" / "cache_jan2026.json",
+            Path.cwd() / "app" / "data" / "cache_jan2026.json",
+            # Vercel serverless Lambda root paths
+            Path("/var/task/app/data/cache_jan2026.json"),
+            Path("/var/task/backend/data/cache_jan2026.json"),
+            Path("/var/task/data/cache_jan2026.json"),
+            # Writable temp fallback
+            Path("/tmp/cache_jan2026.json"),
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        # Default to first candidate
+        return candidates[0]
 
 settings = Settings()

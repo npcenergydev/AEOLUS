@@ -1,6 +1,17 @@
+import sys
+from pathlib import Path
+
+backend_dir = Path(__file__).resolve().parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
 import pytest
 import numpy as np
-from backend.app.services.metrics_service import MetricsService
+
+try:
+    from app.services.metrics_service import MetricsService
+except ImportError:
+    from backend.app.services.metrics_service import MetricsService
 
 def test_metrics_formulas_synthetic():
     """

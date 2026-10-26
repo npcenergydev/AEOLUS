@@ -7,7 +7,11 @@ from typing import Dict, List, Optional, Tuple, Any
 
 import httpx
 import pandas as pd
-from backend.app.core.config import settings
+
+try:
+    from app.core.config import settings
+except ImportError:
+    from backend.app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -22,27 +26,46 @@ class ElexonClient:
     """
 
     def __init__(self, cache_file: Optional[Path] = None):
-        self.cache_file = cache_file or settings.CACHE_FILE
+        self._cache_file_override = cache_file
         self._df_actuals: Optional[pd.DataFrame] = None
         self._df_forecasts: Optional[pd.DataFrame] = None
         self._initialized = False
+
+    @property
+    def cache_file(self) -> Path:
+        return self._cache_file_override or settings.CACHE_FILE
+
+    @cache_file.setter
+    def cache_file(self, val: Path) -> None:
+        self._cache_file_override = val
 
     def initialize(self, force_refresh: bool = False) -> None:
         """Load data from cache file or fetch from API."""
         if self._initialized and not force_refresh:
             return
 
-        if not force_refresh and self.cache_file.exists():
+        active_cache = self.cache_file
+        logger.info(f"ElexonClient initializing using cache path: {active_cache} (exists={active_cache.exists()})")
+
+        if not force_refresh and active_cache.exists():
             try:
                 self._load_from_cache_file()
                 self._initialized = True
                 logger.info(f"Loaded {len(self._df_actuals)} actuals and {len(self._df_forecasts)} forecasts from cache file.")
                 return
             except Exception as e:
-                logger.warning(f"Failed to load cache file {self.cache_file}: {e}. Fetching from Elexon API...")
+                logger.warning(f"Failed to load cache file {active_cache}: {e}. Fetching from Elexon API...")
 
-        self.fetch_and_cache_all()
-        self._initialized = True
+        try:
+            self.fetch_and_cache_all()
+            self._initialized = True
+        except Exception as e:
+            logger.error(f"Error during Elexon client fetch/cache: {e}")
+            if self._df_actuals is None:
+                self._df_actuals = pd.DataFrame(columns=["startTime", "generation"])
+            if self._df_forecasts is None:
+                self._df_forecasts = pd.DataFrame(columns=["startTime", "publishTime", "generation"])
+            self._initialized = True
 
     def _load_from_cache_file(self) -> None:
         with open(self.cache_file, "r") as f:
@@ -90,18 +113,32 @@ class ElexonClient:
         )
         logger.info(f"Fetched {len(forecasts)} forecast entries.")
 
-        # Save to disk cache
-        self.cache_file.parent.mkdir(parents=True, exist_ok=True)
+        # Save to disk cache (with /tmp fallback for read-only serverless runtimes)
         cache_data = {
             "fetched_at": datetime.now(timezone.utc).isoformat() if hasattr(datetime, 'timezone') else datetime.utcnow().isoformat() + "Z",
             "actuals": actuals,
             "forecasts": forecasts
         }
-        with open(self.cache_file, "w") as f:
-            json.dump(cache_data, f)
-        logger.info(f"Persisted data cache to {self.cache_file}")
+        target_file = self.cache_file
+        try:
+            target_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(target_file, "w") as f:
+                json.dump(cache_data, f)
+            logger.info(f"Persisted data cache to {target_file}")
+        except (OSError, PermissionError) as e:
+            fallback = Path("/tmp/cache_jan2026.json")
+            logger.warning(f"Failed to persist cache to {target_file}: {e}. Writing to fallback {fallback}")
+            try:
+                with open(fallback, "w") as f:
+                    json.dump(cache_data, f)
+                self.cache_file = fallback
+            except Exception as f_err:
+                logger.error(f"Failed to write to fallback cache {fallback}: {f_err}")
 
-        self._load_from_cache_file()
+        try:
+            self._load_from_cache_file()
+        except Exception as e:
+            logger.warning(f"Could not reload from cache file: {e}")
 
     def _fetch_fuelhh(self, start: str, end: str) -> List[Dict[str, Any]]:
         """Fetch half-hourly fuel generation actuals filtered for WIND."""

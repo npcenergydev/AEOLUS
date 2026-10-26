@@ -4,16 +4,28 @@ from typing import Dict, List, Optional, Tuple, Any
 
 import numpy as np
 import pandas as pd
-from backend.app.services.forecast_service import forecast_service
-from backend.app.services.elexon_client import elexon_client
-from backend.app.models.schemas import (
-    MetricsSummaryResponse,
-    OverallMetrics,
-    HourlyMetric,
-    HorizonMetric,
-    WindBucketMetric,
-    HistogramBin,
-)
+try:
+    from app.services.forecast_service import forecast_service
+    from app.services.elexon_client import elexon_client
+    from app.models.schemas import (
+        MetricsSummaryResponse,
+        OverallMetrics,
+        HourlyMetric,
+        HorizonMetric,
+        WindBucketMetric,
+        HistogramBin,
+    )
+except ImportError:
+    from backend.app.services.forecast_service import forecast_service
+    from backend.app.services.elexon_client import elexon_client
+    from backend.app.models.schemas import (
+        MetricsSummaryResponse,
+        OverallMetrics,
+        HourlyMetric,
+        HorizonMetric,
+        WindBucketMetric,
+        HistogramBin,
+    )
 
 logger = logging.getLogger(__name__)
 

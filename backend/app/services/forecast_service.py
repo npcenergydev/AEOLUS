@@ -4,8 +4,13 @@ from typing import Dict, List, Optional, Tuple, Any
 
 import numpy as np
 import pandas as pd
-from backend.app.services.elexon_client import elexon_client
-from backend.app.models.schemas import ForecastAlignedPoint, ForecastViewResponse, HorizonPoint
+
+try:
+    from app.services.elexon_client import elexon_client
+    from app.models.schemas import ForecastAlignedPoint, ForecastViewResponse, HorizonPoint
+except ImportError:
+    from backend.app.services.elexon_client import elexon_client
+    from backend.app.models.schemas import ForecastAlignedPoint, ForecastViewResponse, HorizonPoint
 
 logger = logging.getLogger(__name__)
 

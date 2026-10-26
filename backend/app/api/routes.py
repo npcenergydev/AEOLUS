@@ -1,18 +1,33 @@
 import logging
 from typing import Optional, List
 from fastapi import APIRouter, Query, HTTPException
-from backend.app.models.schemas import (
-    HealthResponse,
-    DateRangeInfo,
-    ActualPoint,
-    ForecastViewResponse,
-    MetricsSummaryResponse,
-    HorizonPoint,
-)
-from backend.app.services.elexon_client import elexon_client
-from backend.app.services.forecast_service import forecast_service
-from backend.app.services.metrics_service import metrics_service
-from backend.app.core.config import settings
+
+try:
+    from app.models.schemas import (
+        HealthResponse,
+        DateRangeInfo,
+        ActualPoint,
+        ForecastViewResponse,
+        MetricsSummaryResponse,
+        HorizonPoint,
+    )
+    from app.services.elexon_client import elexon_client
+    from app.services.forecast_service import forecast_service
+    from app.services.metrics_service import metrics_service
+    from app.core.config import settings
+except ImportError:
+    from backend.app.models.schemas import (
+        HealthResponse,
+        DateRangeInfo,
+        ActualPoint,
+        ForecastViewResponse,
+        MetricsSummaryResponse,
+        HorizonPoint,
+    )
+    from backend.app.services.elexon_client import elexon_client
+    from backend.app.services.forecast_service import forecast_service
+    from backend.app.services.metrics_service import metrics_service
+    from backend.app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -21,23 +36,35 @@ router = APIRouter()
 @router.get("/health", response_model=HealthResponse)
 def get_health():
     """Health check endpoint with data store metrics."""
-    df_act = elexon_client.get_actuals()
-    df_fc = elexon_client.get_forecasts()
-    
-    act_range = {
-        "min_startTime": df_act["startTime"].min().isoformat() if not df_act.empty else None,
-        "max_startTime": df_act["startTime"].max().isoformat() if not df_act.empty else None,
-    }
+    try:
+        df_act = elexon_client.get_actuals()
+        df_fc = elexon_client.get_forecasts()
+        
+        act_range = {
+            "min_startTime": df_act["startTime"].min().isoformat() if not df_act.empty else None,
+            "max_startTime": df_act["startTime"].max().isoformat() if not df_act.empty else None,
+        }
 
-    return HealthResponse(
-        status="healthy",
-        project=settings.PROJECT_NAME,
-        version=settings.VERSION,
-        actuals_count=len(df_act),
-        forecasts_count=len(df_fc),
-        cached=settings.CACHE_FILE.exists(),
-        data_range=act_range
-    )
+        return HealthResponse(
+            status="healthy",
+            project=settings.PROJECT_NAME,
+            version=settings.VERSION,
+            actuals_count=len(df_act),
+            forecasts_count=len(df_fc),
+            cached=settings.CACHE_FILE.exists(),
+            data_range=act_range
+        )
+    except Exception as e:
+        logger.error(f"Health check error: {e}", exc_info=True)
+        return HealthResponse(
+            status=f"degraded: {str(e)}",
+            project=settings.PROJECT_NAME,
+            version=settings.VERSION,
+            actuals_count=0,
+            forecasts_count=0,
+            cached=settings.CACHE_FILE.exists() if hasattr(settings, "CACHE_FILE") else False,
+            data_range={"error": str(e)}
+        )
 
 @router.get("/dates", response_model=DateRangeInfo)
 def get_date_range():
