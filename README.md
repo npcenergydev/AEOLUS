@@ -193,7 +193,9 @@ AEOLUS is configured for **Vercel Services** (multi-service monorepos), allowing
 
 ## 9. AI Tools Disclosure
 
-In accordance with engineering transparency requirements, this project was architected, engineered, tested, and documented using **Gemini / Google DeepMind Antigravity** as an AI pair programmer. AI tools were utilized for:
+In accordance with engineering transparency requirements, this project was architected, engineered, tested, and documented using **Gemini / Google DeepMind Antigravity** as an AI pair programmer. **Claude** for research purposes. AI tools were utilized for:
+* Calculating the metrics and performance tests.
+* Helping create React18 based frontend within time along with my design.
 * Elexon BMRS API exploration and parameter validation.
 * Vectorized numerical metric pipelines (MAE, RMSE, WAPE, quantiles).
 * Pytest unit and integration test generation.
